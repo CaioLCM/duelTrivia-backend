@@ -19,13 +19,13 @@ class User(Base):
 
     total_games: Mapped[int] = mapped_column(default=0)
 
-    total_wins = Mapped[int] = mapped_column(default=0)
+    total_wins: Mapped[int] = mapped_column(default=0)
 
-    total_loses = Mapped[int] = mapped_column(default=0)
+    total_loses: Mapped[int] = mapped_column(default=0)
 
-    total_draws = Mapped[int] = mapped_column(default=0)
+    total_draws: Mapped[int] = mapped_column(default=0)
 
-    created_at = Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now()
     )
