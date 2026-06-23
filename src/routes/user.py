@@ -1,3 +1,5 @@
+import bcrypt
+
 from fastapi import APIRouter, HTTPException, Path, status
 
 from typing import Annotated
@@ -16,6 +18,17 @@ class UserSchema(BaseModel):
     name: str
     email: EmailStr
     password: str
+
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: str
+
+def hash_password(password: str) -> str:
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    return hashed.decode("utf-8")
+
+def verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
 
 user_router = APIRouter()
 
@@ -45,7 +58,9 @@ def get_user(user_id: Annotated[int, Path(title="ID do usuário a ser buscado")]
 @user_router.post("", status_code=status.HTTP_201_CREATED)
 def create_user(user: UserSchema):
     engine = get_engine()
-    new_user = User(name=user.name, email=user.email, password=user.password)
+    new_user = User(
+        name=user.name, email=user.email, password=hash_password(user.password)
+    )
     try:
         created_user = add_user_at_db(engine, new_user)
     except SQLAlchemyError:
@@ -54,6 +69,17 @@ def create_user(user: UserSchema):
             detail="Não foi possível criar o usuário",
         )
     return {"user": created_user}
+
+@user_router.post("/login")
+def login(credentials: LoginSchema):
+    engine = get_engine()
+    user = get_user_by_email_from_db(engine, credentials.email)
+    if user is None or not verify_password(credentials.password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="E-mail ou senha inválidos",
+        )
+    return {"user": user}
 
 @user_router.put("/{user_id}")
 def update_user(
@@ -67,7 +93,10 @@ def update_user(
             detail="Usuário não encontrado",
         )
     new_data = User(
-        id=user_id, name=user.name, email=user.email, password=user.password
+        id=user_id,
+        name=user.name,
+        email=user.email,
+        password=hash_password(user.password),
     )
     try:
         updated_user = update_user_at_db(engine, new_data)

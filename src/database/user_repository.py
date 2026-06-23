@@ -10,6 +10,10 @@ def get_users_from_db(engine):
 def get_user_from_db(engine, id):
     with Session(engine) as session:
         return session.scalar(select(User).where(User.id == id))
+
+def get_user_by_email_from_db(engine, email):
+    with Session(engine) as session:
+        return session.scalar(select(User).where(User.email == email))
     
 def add_user_at_db(engine, user: User):
     with Session(engine) as session:
