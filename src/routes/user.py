@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Path, status
+from fastapi import APIRouter, HTTPException, Path, status, Security
+from fastapi.security import OAuth2PasswordBearer
 
 from typing import Annotated
 
@@ -10,6 +11,7 @@ from database.models import User
 from database.user_repository import *
 
 from security.hash import hash_password, verify_password
+from security.jwt import create_access_token, decode_access_token
 
 from pydantic import BaseModel, EmailStr
 
@@ -23,9 +25,14 @@ class LoginSchema(BaseModel):
     email: EmailStr
     password: str
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
+
 user_router = APIRouter()
 
-@user_router.get("")
+def token_payload(user: User) -> dict:
+    return {"id": user.id, "name": user.name, "email": user.email}
+
+@user_router.get("/all")
 def get_users():
     engine = get_engine()
     try:
@@ -37,16 +44,16 @@ def get_users():
         )
     return {"users": users}
 
-@user_router.get("/{user_id}")
-def get_user(user_id: Annotated[int, Path(title="ID do usuário a ser buscado")]):
-    engine = get_engine()
-    user = get_user_from_db(engine, user_id)
-    if user is None:
+@user_router.get("")
+def get_user(token: str = Security(oauth2_scheme)):
+    current_user = decode_access_token(token)
+    if current_user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    return {"user": user}
+    return {"user": current_user}
 
 @user_router.post("", status_code=status.HTTP_201_CREATED)
 def create_user(user: UserSchema):
@@ -61,7 +68,8 @@ def create_user(user: UserSchema):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Não foi possível criar o usuário",
         )
-    return {"user": created_user}
+    token = create_access_token(token_payload(created_user))
+    return {"user": created_user, "token": token}
 
 @user_router.post("/login")
 def login(credentials: LoginSchema):
@@ -72,21 +80,21 @@ def login(credentials: LoginSchema):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="E-mail ou senha inválidos",
         )
-    return {"user": user}
+    token = create_access_token(token_payload(user))
+    return {"token": token}
 
-@user_router.put("/{user_id}")
-def update_user(
-    user_id: Annotated[int, Path(title="ID do usuário a ser atualizado")],
-    user: UserSchema,
-):
+@user_router.put("")
+def update_user(user: UserSchema, token: str = Security(oauth2_scheme)):
     engine = get_engine()
-    if get_user_from_db(engine, user_id) is None:
+    current_user = decode_access_token(token)
+    if current_user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     new_data = User(
-        id=user_id,
+        id=current_user["id"],
         name=user.name,
         email=user.email,
         password=hash_password(user.password),
@@ -100,10 +108,17 @@ def update_user(
         )
     return {"user": updated_user}
 
-@user_router.delete("/{user_id}")
-def delete_user(user_id: Annotated[int, Path(title="ID do usuário a ser removido")]):
+@user_router.delete("")
+def delete_user(token: str = Security(oauth2_scheme)):
     engine = get_engine()
-    existing_user = get_user_from_db(engine, user_id)
+    current_user = decode_access_token(token)
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    existing_user = get_user_from_db(engine, current_user["id"])
     if existing_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
