@@ -29,3 +29,4 @@ class User(Base):
         TIMESTAMP(timezone=True),
         server_default=func.now()
     )
+    

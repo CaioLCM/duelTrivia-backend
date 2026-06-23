@@ -38,3 +38,4 @@ def delete_user_at_db(engine, user: User):
         session.delete(my_user)
         session.commit()
         return my_user
+    
