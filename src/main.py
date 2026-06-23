@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routes.user import user_router
+from routes.trivia import trivia_router
 
 from database.models import Base
 from database.connection import get_engine
@@ -21,3 +22,4 @@ CORSMiddleware(
 )
 
 app.include_router(user_router, prefix="/users")
+app.include_router(trivia_router, prefix="/questions")
