@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Path, status, Security
-from fastapi.security import OAuth2PasswordBearer
 
 from typing import Annotated
 
@@ -8,32 +7,40 @@ from sqlalchemy.exc import SQLAlchemyError
 from database.connection import get_engine
 from database.models import User
 
-from database.user_repository import *
+from database.user_repository import (
+    get_users_from_db,
+    get_user_from_db,
+    get_user_by_email_from_db,
+    add_user_at_db,
+    update_user_at_db,
+    delete_user_at_db,
+)
 
 from security.hash import hash_password, verify_password
-from security.jwt import create_access_token, decode_access_token
+from security.jwt import create_access_token, decode_access_token, oauth2_scheme
 
-from pydantic import BaseModel, EmailStr
-
-
-class UserSchema(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
-
-class LoginSchema(BaseModel):
-    email: EmailStr
-    password: str
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
+from schemas.user_schema import (
+    UserSchema,
+    LoginSchema,
+    UserOut,
+    UsersOut,
+    TokenOut,
+    UserTokenOut,
+)
 
 user_router = APIRouter()
 
 def token_payload(user: User) -> dict:
     return {"id": user.id, "name": user.name, "email": user.email}
 
-@user_router.get("/all")
-def get_users():
+@user_router.get("/all", response_model=UsersOut)
+def get_users(token: str = Security(oauth2_scheme)):
+    if decode_access_token(token) is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     engine = get_engine()
     try:
         users = get_users_from_db(engine)
@@ -44,7 +51,7 @@ def get_users():
         )
     return {"users": users}
 
-@user_router.get("")
+@user_router.get("", response_model=UserOut)
 def get_user(token: str = Security(oauth2_scheme)):
     current_user = decode_access_token(token)
     if current_user is None:
@@ -55,7 +62,7 @@ def get_user(token: str = Security(oauth2_scheme)):
         )
     return {"user": current_user}
 
-@user_router.post("", status_code=status.HTTP_201_CREATED)
+@user_router.post("", status_code=status.HTTP_201_CREATED, response_model=UserTokenOut)
 def create_user(user: UserSchema):
     engine = get_engine()
     new_user = User(
@@ -71,7 +78,7 @@ def create_user(user: UserSchema):
     token = create_access_token(token_payload(created_user))
     return {"user": created_user, "token": token}
 
-@user_router.post("/login")
+@user_router.post("/login", response_model=TokenOut)
 def login(credentials: LoginSchema):
     engine = get_engine()
     user = get_user_by_email_from_db(engine, credentials.email)
@@ -83,7 +90,7 @@ def login(credentials: LoginSchema):
     token = create_access_token(token_payload(user))
     return {"token": token}
 
-@user_router.put("")
+@user_router.put("", response_model=UserOut)
 def update_user(user: UserSchema, token: str = Security(oauth2_scheme)):
     engine = get_engine()
     current_user = decode_access_token(token)
@@ -108,7 +115,7 @@ def update_user(user: UserSchema, token: str = Security(oauth2_scheme)):
         )
     return {"user": updated_user}
 
-@user_router.delete("")
+@user_router.delete("", response_model=UserOut)
 def delete_user(token: str = Security(oauth2_scheme)):
     engine = get_engine()
     current_user = decode_access_token(token)

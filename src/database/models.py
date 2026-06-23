@@ -13,9 +13,9 @@ class User(Base):
 
     name: Mapped[str] = mapped_column(String(30))
 
-    email: Mapped[str]
+    email: Mapped[str] = mapped_column(unique=True)
 
-    password: Mapped[str] = mapped_column(String[8])
+    password: Mapped[str] = mapped_column(String(255))
 
     total_games: Mapped[int] = mapped_column(default=0)
 
