@@ -1,17 +1,25 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes.user import user_router
-from routes.trivia import trivia_router
+from src.routes.user import user_router
+from src.routes.trivia import trivia_router
+from src.routes.game import game_router
 
-from database.models import Base
-from database.connection import get_engine
+from src.database.models import Base
+from src.database.connection import get_engine
 
 from contextlib import asynccontextmanager
 
+from sqlalchemy.exc import SQLAlchemyError
+
+import logging
+
 @asynccontextmanager
 async def lifespan(app):
-    Base.metadata.create_all(bind=get_engine())
+    try:
+        Base.metadata.create_all(bind=get_engine())
+    except SQLAlchemyError:
+        logging.warning("Banco indisponível: API subindo sem inicializar tabelas")
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -23,5 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(user_router, prefix="/users")
-app.include_router(trivia_router, prefix="/questions")
+app.include_router(user_router, prefix="/users", tags=["/users"])
+app.include_router(trivia_router, prefix="/questions", tags=["/questions"])
+app.include_router(game_router, prefix="/game", tags=["/game"])
