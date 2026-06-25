@@ -27,10 +27,11 @@ manager = ConnectionManager()
 @game_router.websocket("/search/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: int):
     await manager.connect(websocket)
+    if len(manager.active_connections) == 2:
+        await manager.broadcast("match!!!")
     try:
         while True:
-            data = await websocket.receive_text()
-            await manager.broadcast(f"Client #{client_id} says: {data}")
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         await manager.broadcast(f"Client #{client_id} left the chat")
