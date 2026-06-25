@@ -4,10 +4,10 @@ from typing import Annotated
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from database.connection import get_engine
-from database.models import User
+from src.database.connection import get_engine
+from src.database.models import User
 
-from database.user_repository import (
+from src.database.user_repository import (
     get_users_from_db,
     get_user_from_db,
     get_user_by_email_from_db,
@@ -16,10 +16,10 @@ from database.user_repository import (
     delete_user_at_db,
 )
 
-from security.hash import hash_password, verify_password
-from security.jwt import create_access_token, decode_access_token, oauth2_scheme
+from src.security.hash import hash_password, verify_password
+from src.security.jwt import create_access_token, decode_access_token, oauth2_scheme
 
-from schemas.user_schema import (
+from src.schemas.user_schema import (
     UserSchema,
     LoginSchema,
     UserOut,

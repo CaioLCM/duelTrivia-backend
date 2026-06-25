@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi.security import OAuth2PasswordBearer
 
-from core.settings import configs
+from src.core.settings import configs
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")

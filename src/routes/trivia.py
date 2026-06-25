@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Security
 
 import httpx
 
-from security.jwt import decode_access_token, oauth2_scheme
+from src.security.jwt import decode_access_token, oauth2_scheme
 
 trivia_router = APIRouter()
 
