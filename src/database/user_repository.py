@@ -34,6 +34,22 @@ def update_user_at_db(engine, user: User):
         session.refresh(my_user)
         return my_user
 
+def register_game_result_at_db(engine, user_id, result):
+    with Session(engine) as session:
+        my_user = session.scalar(select(User).where(User.id == user_id))
+        if my_user is None:
+            return None
+        my_user.total_games += 1
+        if result == "win":
+            my_user.total_wins += 1
+        elif result == "lose":
+            my_user.total_loses += 1
+        else:
+            my_user.total_draws += 1
+        session.commit()
+        session.refresh(my_user)
+        return my_user
+
 def delete_user_at_db(engine, user: User):
     with Session(engine) as session:
         my_user = session.scalar(select(User).where(User.id == user.id))

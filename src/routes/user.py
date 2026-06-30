@@ -13,6 +13,7 @@ from src.database.user_repository import (
     get_user_by_email_from_db,
     add_user_at_db,
     update_user_at_db,
+    register_game_result_at_db,
     delete_user_at_db,
 )
 
@@ -22,8 +23,10 @@ from src.security.jwt import create_access_token, decode_access_token, oauth2_sc
 from src.schemas.user_schema import (
     UserSchema,
     LoginSchema,
+    GameResultSchema,
     UserOut,
     UsersOut,
+    UserStatsOut,
     TokenOut,
     UserTokenOut,
 )
@@ -112,6 +115,32 @@ def update_user(user: UserSchema, token: str = Security(oauth2_scheme)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Não foi possível atualizar o usuário",
+        )
+    return {"user": updated_user}
+
+@user_router.patch("/result", response_model=UserStatsOut)
+def register_result(payload: GameResultSchema, token: str = Security(oauth2_scheme)):
+    current_user = decode_access_token(token)
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    engine = get_engine()
+    try:
+        updated_user = register_game_result_at_db(
+            engine, current_user["id"], payload.result.value
+        )
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Não foi possível registrar o resultado",
+        )
+    if updated_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado",
         )
     return {"user": updated_user}
 
