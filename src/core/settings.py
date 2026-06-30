@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     ENV: str
 
-    JWT_SECRET: str
+    JWT_SECRET: str = "secret"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60
 
