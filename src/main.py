@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.routes.user import user_router
 from src.routes.trivia import trivia_router
-from src.routes.game import game_router
 
 from src.database.models import Base
 from src.database.connection import get_engine
@@ -33,4 +32,3 @@ app.add_middleware(
 
 app.include_router(user_router, prefix="/users", tags=["/users"])
 app.include_router(trivia_router, prefix="/questions", tags=["/questions"])
-app.include_router(game_router, prefix="/game", tags=["/game"])
