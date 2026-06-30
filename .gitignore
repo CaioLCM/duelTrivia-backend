@@ -11,7 +11,5 @@ wheels/
 
 .env
 
-uv.lock
-
 # Local SQLite database
 *.db
